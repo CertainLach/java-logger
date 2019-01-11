@@ -48,7 +48,7 @@ public class FileReceiver implements IReceiver {
 		if (object == null)
 			return "null";
 		if (object instanceof Throwable) {
-			final StringBuilder stringBuilder = new StringBuilder(256);
+			final StringBuilder stringBuilder = new StringBuilder();
 			Throwable throwable = (Throwable) object;
 			stringBuilder.append("Exception (").append(throwable.getClass().getName()).append("): ");
 			String message;
