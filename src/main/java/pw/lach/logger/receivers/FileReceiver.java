@@ -9,33 +9,37 @@ import java.io.*;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
+import java.text.Format;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("Duplicates")
 public class FileReceiver implements IReceiver {
+
+	private static final Pattern LINE_PATTERN = Pattern.compile("\n");
+	private static final Pattern OWNER_PATTERN = Pattern.compile("[^a-zA-Z1-9]");
+	private static final String ls = System.lineSeparator();
 	private static final Object logLock = new Object();
-	private int nameLimit;
+
+	private static final Format dayDateFormat = new SimpleDateFormat("yy-MM-dd");
+	private static final Format timeDateFormat = new SimpleDateFormat("hh-mm-ss.SSS");
+	private final Format dateFormat = new SimpleDateFormat("MM-dd hh:mm");
+
 	private File logStorageFolder;
 
-	@SuppressWarnings("WeakerAccess")
-	public FileReceiver(File logStorageFolder, int nameLimit) {
-		this.nameLimit = nameLimit;
+	public FileReceiver(File logStorageFolder) {
 		// this.logStorageFolder=logStorageFolder;
-		logStorageFolder.mkdirs();
+		mkdirDirectory(logStorageFolder);
 		Date date = new Date();
 		File mainFolder = new File(logStorageFolder, dayDateFormat.format(date));
-		mainFolder.mkdir();
+		mkdirDirectory(mainFolder);
 		File subFolder = new File(mainFolder, timeDateFormat.format(date));
-		subFolder.mkdir();
+		mkdirDirectory(subFolder);
 		this.logStorageFolder = subFolder;
-	}
-
-	public FileReceiver(File logStorageFolder) {
-		this(logStorageFolder, 15);
 	}
 
 	private Gson gson = new GsonBuilder().create();
@@ -44,33 +48,32 @@ public class FileReceiver implements IReceiver {
 		if (object == null)
 			return "null";
 		if (object instanceof Throwable) {
-			final StringBuilder stringBuilder = new StringBuilder();
+			final StringBuilder stringBuilder = new StringBuilder(256);
 			Throwable throwable = (Throwable) object;
 			stringBuilder.append("Exception (").append(throwable.getClass().getName()).append("): ");
-			int trimCount = -1;
-			String message = null;
+			String message;
 			if (throwable.getSuppressed().length >= 1) {
 				message = (throwable.getSuppressed()[0].getMessage());
 			} else {
 				message = (throwable.getMessage());
 			}
 			if (message != null) {
-				stringBuilder.append(message);
-				stringBuilder.append(":");
+				stringBuilder.append(message)
+						.append(':');
 			}
 			for (StackTraceElement stackTraceElement : throwable.getStackTrace()) {
-				stringBuilder.append("\n\t").append(stackTraceElement.getClassName()).append("#")
+				stringBuilder.append("\n\t").append(stackTraceElement.getClassName()).append('#')
 						.append(stackTraceElement.getMethodName());
 				if (stackTraceElement.getFileName() != null) {
-					stringBuilder.append(" (");
-					stringBuilder.append(stackTraceElement.getFileName()).append(":");
-					stringBuilder.append(stackTraceElement.getLineNumber());
-					stringBuilder.append(")");
+					stringBuilder.append(" (")
+							.append(stackTraceElement.getFileName()).append(':')
+							.append(stackTraceElement.getLineNumber())
+							.append(')');
 				}
 			}
 			if (throwable.getCause() != null) {
-				stringBuilder.append("\n");
-				stringBuilder.append(Arrays.stream(stringifyObject(throwable.getCause()).split("\n")).map(e -> "\t" + e)
+				stringBuilder.append("\n")
+						.append(Arrays.stream(LINE_PATTERN.split(stringifyObject(throwable.getCause()), -1)).map(e -> "\t" + e)
 						.collect(Collectors.joining("\n")).replaceFirst("Exception", "Caused by"));
 			}
 			return stringBuilder.toString();
@@ -113,35 +116,30 @@ public class FileReceiver implements IReceiver {
 		return stringiftIdent(count, ' ');
 	}
 
-	String stringifyIdentData(String provider, LoggerWriteAction data) {
-		return "[" + dateFormat.format(new Date(data.getWrittenAt())) + "|       ] " + " "
-				+ stringiftIdent(data.getIdentationLength() - 1, '>') + " " + data.getName() + System.lineSeparator();
+	private String stringifyIdentData(String provider, LoggerWriteAction data) {
+		return '[' + dateFormat.format(new Date(data.getWrittenAt())) + "|       ] " + " "
+				+ stringiftIdent(data.getIdentationLength() - 1, '>') + " " + data.getName() + ls;
 	}
 
-	String stringifyDeentData(String provider, LoggerWriteAction data) {
+	private String stringifyDeentData(String provider, LoggerWriteAction data) {
 		return "[" + dateFormat.format(new Date(data.getWrittenAt())) + "|       ] " + " "
 				+ stringiftIdent(data.getIdentationLength(), '<') + " " + data.getName() + " (Done in " + data.getTime()
-				+ "ms)" + System.lineSeparator();
+				+ "ms)" + ls;
 	}
 
-	SimpleDateFormat dayDateFormat = new SimpleDateFormat("yy-MM-dd");
-	SimpleDateFormat timeDateFormat = new SimpleDateFormat("hh-mm-ss.SSS");
-
-	SimpleDateFormat dateFormat = new SimpleDateFormat("MM-dd hh:mm");
-
-	String stringifyCommonData(String type, String provider, LoggerWriteAction data, String outString) {
+	private String stringifyCommonData(String type, String provider, LoggerWriteAction data, String outString) {
 		int i = 0;
 		StringBuilder ret = new StringBuilder();
-		// noinspection ReplaceAllDot
-		for (String s : outString.split("\n")) {
+		String date = dateFormat.format(new Date(data.getWrittenAt()));
+		for (String s : LINE_PATTERN.split(outString, -1)) {
 			if (i == 0) {
-				ret.append("[").append(dateFormat.format(new Date(data.getWrittenAt()))).append("|").append(type)
+				ret.append('[').append(date).append('|').append(type)
 						.append("] ").append(stringifyIdent(data.getIdentationLength())).append(s)
-						.append(System.lineSeparator());
+						.append(ls);
 				i = 1;
 			} else {
 				ret.append("                      ").append(stringifyIdent(data.getIdentationLength())).append(s)
-						.append(System.lineSeparator());
+						.append(ls);
 			}
 		}
 		return ret.toString();
@@ -166,7 +164,7 @@ public class FileReceiver implements IReceiver {
 	// private PrintStream ps = new PrintStream(new
 	// FileOutputStream(FileDescriptor.out));
 	private void writeStdout(String owner, String string) {
-		owner = owner.replaceAll("[^a-zA-Z1-9]", "_");
+		owner = OWNER_PATTERN.matcher(owner).replaceAll("_");
 		// ps.print(string);
 		try {
 			Files.write(new File(logStorageFolder, owner + ".log").toPath(), (string).getBytes(),
@@ -207,6 +205,16 @@ public class FileReceiver implements IReceiver {
 					writeDebugData(data.getWrittenFrom(), data, outString);
 				break;
 			}
+		}
+	}
+
+	private static String createFailureMessage(File file) {
+		return "Could not mkdir: " + file.getAbsolutePath();
+	}
+
+	private static void mkdirDirectory(File folder) {
+		if (!folder.isDirectory() && !folder.mkdirs()) {
+			throw new RuntimeException(createFailureMessage(folder));
 		}
 	}
 }
