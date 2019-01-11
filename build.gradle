@@ -7,17 +7,9 @@ group 'pw.lach'
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
-apply plugin: 'maven-publish'
 
 sourceCompatibility = 1.8
-
-publishing {
-    publications {
-        mavenJava(MavenPublication) {
-            from components.java
-        }
-    }
-}
+targetCompatibility = 1.8
 
 repositories {
     mavenCentral()
