@@ -5,7 +5,8 @@ import com.google.gson.GsonBuilder;
 import pw.lach.logger.IReceiver;
 import pw.lach.logger.LoggerWriteAction;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
@@ -24,6 +25,7 @@ public class FileReceiver implements IReceiver {
 	private static final Pattern OWNER_PATTERN = Pattern.compile("[^a-zA-Z1-9]");
 	private static final String ls = System.lineSeparator();
 	private static final Object logLock = new Object();
+	private final Gson gson = new GsonBuilder().create();
 
 	private static final Format dayDateFormat = new SimpleDateFormat("yy-MM-dd");
 	private static final Format timeDateFormat = new SimpleDateFormat("hh-mm-ss.SSS");
@@ -41,8 +43,6 @@ public class FileReceiver implements IReceiver {
 		mkdirDirectory(subFolder);
 		this.logStorageFolder = subFolder;
 	}
-
-	private Gson gson = new GsonBuilder().create();
 
 	private String stringifyObject(Object object) {
 		if (object == null)

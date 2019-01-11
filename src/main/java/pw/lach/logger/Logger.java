@@ -2,7 +2,10 @@ package pw.lach.logger;
 
 import lombok.SneakyThrows;
 
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Stack;
+
 
 public final class Logger {
     private static int repeatCount;
