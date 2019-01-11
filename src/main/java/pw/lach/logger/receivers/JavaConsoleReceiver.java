@@ -40,7 +40,7 @@ public final class JavaConsoleReceiver implements IReceiver {
             return "null";
         return weakCache.computeIfAbsent(object, k -> {
             if (k instanceof Throwable) {
-                StackTraceElement[] stack = ((Throwable) object).getStackTrace();
+                StackTraceElement[] stack = ((Throwable) k).getStackTrace();
                 StringBuilder exception = new StringBuilder();
                 for (StackTraceElement s : stack) {
                     exception.append(s.toString()).append("\n\t");
