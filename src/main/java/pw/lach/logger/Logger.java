@@ -6,6 +6,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.Stack;
 
+
 public final class Logger {
     private static int repeatCount;
     private static String lastProvider;
@@ -126,37 +127,3 @@ public final class Logger {
         receivers.add(receiver);
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

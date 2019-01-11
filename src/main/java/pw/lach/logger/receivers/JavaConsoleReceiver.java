@@ -4,7 +4,12 @@ import com.google.gson.Gson;
 import pw.lach.logger.IReceiver;
 import pw.lach.logger.LoggerWriteAction;
 
-import java.io.*;
+import java.io.BufferedOutputStream;
+import java.io.BufferedWriter;
+import java.io.FileDescriptor;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
@@ -21,7 +26,8 @@ public final class JavaConsoleReceiver implements IReceiver {
 
     static {
         bw = new BufferedWriter(new OutputStreamWriter(
-                new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 8192), StandardCharsets.UTF_8), 8192);
+                new BufferedOutputStream(new FileOutputStream(FileDescriptor.out), 8192), StandardCharsets.UTF_8),
+                8192);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
                 bw.flush();
@@ -32,27 +38,24 @@ public final class JavaConsoleReceiver implements IReceiver {
     private String stringifyObject(Object object) {
         if (object == null)
             return "null";
-        String cache = weakCache.get(object);
-        if (cache == null) {
+        return weakCache.computeIfAbsent(object, k -> {
             if (object instanceof Throwable) {
                 StackTraceElement[] stack = ((Throwable) object).getStackTrace();
                 StringBuilder exception = new StringBuilder();
                 for (StackTraceElement s : stack) {
                     exception.append(s.toString()).append("\n\t");
                 }
-                cache = exception.toString();
+                return exception.toString();
             } else if (object instanceof String)
-                cache = (String) object;
+                return (String) object;
             else if (object instanceof Integer || object instanceof Long || object instanceof Byte || object instanceof Float || object instanceof Short)
-                cache = String.valueOf(object);
+                return String.valueOf(object);
             else if (object instanceof BigInteger)
-                cache = object.toString();
+                return object.toString();
             else if (object instanceof Date)
-                cache = object.toString();
-            else cache = gson.toJson(object);
-            weakCache.put(object, cache);
-        }
-        return cache;
+                return object.toString();
+            else return gson.toJson(object);
+        });
     }
 
     private String stringifyData(LoggerWriteAction data) {
