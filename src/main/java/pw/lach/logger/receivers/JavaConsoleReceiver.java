@@ -39,22 +39,22 @@ public final class JavaConsoleReceiver implements IReceiver {
         if (object == null)
             return "null";
         return weakCache.computeIfAbsent(object, k -> {
-            if (object instanceof Throwable) {
-                StackTraceElement[] stack = ((Throwable) object).getStackTrace();
+            if (k instanceof Throwable) {
+                StackTraceElement[] stack = ((Throwable) k).getStackTrace();
                 StringBuilder exception = new StringBuilder();
                 for (StackTraceElement s : stack) {
                     exception.append(s.toString()).append("\n\t");
                 }
                 return exception.toString();
-            } else if (object instanceof String)
+            } else if (k instanceof String)
                 return (String) object;
-            else if (object instanceof Integer || object instanceof Long || object instanceof Byte || object instanceof Float || object instanceof Short)
+            else if (k instanceof Integer || k instanceof Long || k instanceof Byte || k instanceof Float || k instanceof Short)
                 return String.valueOf(object);
-            else if (object instanceof BigInteger)
-                return object.toString();
-            else if (object instanceof Date)
-                return object.toString();
-            else return gson.toJson(object);
+            else if (k instanceof BigInteger)
+                return k.toString();
+            else if (k instanceof Date)
+                return k.toString();
+            else return gson.toJson(k);
         });
     }
 
